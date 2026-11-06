@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#102d25" />
+  <title>Our Christmas Gift Wheel 🎄</title>
+  <style>
+    :root{color-scheme:dark;--cream:#fff9e9;--gold:#f9d98a;--green:#102d25;--red:#c73e49}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 10%,#275447 0%,#102d25 52%,#071a17 100%);color:var(--cream);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px}
+    .snow{pointer-events:none;position:fixed;inset:0;opacity:.26;background-image:radial-gradient(2px 2px at 15% 20%,white 90%,transparent),radial-gradient(2px 2px at 74% 36%,white 90%,transparent),radial-gradient(3px 3px at 40% 76%,white 90%,transparent),radial-gradient(2px 2px at 82% 87%,white 90%,transparent);background-size:210px 210px}
+    main{position:relative;text-align:center;width:min(100%,650px)}
+    .eyebrow{text-transform:uppercase;letter-spacing:.23em;font-size:12px;font-weight:800;color:var(--gold)}
+    h1{font-family:Georgia,serif;font-size:clamp(34px,7vw,57px);font-weight:700;line-height:1.06;margin:12px 0}
+    .intro{opacity:.85;margin:0 auto 24px;max-width:490px;line-height:1.55}
+    .wheel-wrap{position:relative;width:min(85vw,490px);aspect-ratio:1;margin:0 auto 23px;filter:drop-shadow(0 18px 22px #0006)}
+    .wheel{width:100%;height:100%;display:block;border:9px solid #ebca7d;border-radius:50%;box-shadow:inset 0 0 0 4px #fff7d1,0 0 0 5px #8b602d;transform:rotate(0deg);transition:none;background:#fff5db}
+    .pointer{position:absolute;z-index:3;left:50%;top:-17px;transform:translateX(-50%);width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:42px solid #fff1bb;filter:drop-shadow(0 3px 2px #0009)}
+    .hub{position:absolute;z-index:2;width:66px;height:66px;border:6px solid #f8e6b3;border-radius:50%;background:linear-gradient(145deg,#e6575d,#a5222e);left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;font-size:27px;box-shadow:0 3px 10px #0008}
+    .controls{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    button{cursor:pointer;border:0;border-radius:999px;padding:15px 25px;font:800 15px ui-sans-serif,system-ui;transition:transform .15s,opacity .15s;min-width:170px}
+    button:hover:not(:disabled){transform:translateY(-2px)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .test{background:#f6e8c0;color:#263c31}.real{background:#c93c47;color:white;box-shadow:0 5px 18px #0004}
+    .message{min-height:64px;margin:22px auto 0;line-height:1.5;font-size:17px;max-width:520px}
+    .message strong{color:#ffe09a}
+    .notice{font-size:12px;opacity:.67;line-height:1.5;margin:10px auto 0;max-width:500px}
+    .gift-list{margin:24px auto 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:540px}
+    .gift{border:1px solid #ffffff29;background:#ffffff0c;border-radius:12px;padding:10px 5px;font-size:12px;min-width:0}
+    .gift img{display:block;width:100%;height:94px;object-fit:cover;border-radius:9px;margin-bottom:7px;background:#f2e6d6}.gift span{display:block;font-size:22px;margin-bottom:3px}
+    .gift small{display:block;color:#f9d98a;font-weight:700;margin-top:5px}
+    @media(max-width:480px){.gift-list{grid-template-columns:repeat(2,1fr)}.hub{height:54px;width:54px;font-size:22px}.wheel{border-width:6px}}
+    @media(prefers-reduced-motion:reduce){button{transition:none}}
+  </style>
+</head>
+<body>
+  <div class="snow" aria-hidden="true"></div>
+  <main>
+    <div class="eyebrow">For my favourite person · Christmas 2026</div>
+    <h1>For my Beautiful wife Lori</h1>
+    <p class="intro">Spin the wheel for your 2026 Present , Good luck my beautiful wife</p>
+    <div class="wheel-wrap">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas class="wheel" id="wheel" width="900" height="900" role="img" aria-label="Christmas gift wheel with eight presents"></canvas>
+      <div class="hub" aria-hidden="true">🎁</div>
+    </div>
+    <div class="controls">
+      <button class="test" id="testBtn">✨ Test spin</button>
+      <button class="real" id="realBtn">🎄 REAL SPIN</button>
+    </div>
+    <div class="message" id="message" role="status" aria-live="polite">Your Christmas surprise is waiting!</div>
+    <div class="gift-list" id="giftList"></div>
+  </main>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+    import { getFirestore, doc, getDoc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+
+    // Firebase web app configuration (public client identifiers).
+    const firebaseConfig = {
+      apiKey: 'AIzaSyCL7ITVJ8h-XgXV3OBMSJAaPb7_-HKbTqg',
+      authDomain: 'lori-christmas-2026.firebaseapp.com',
+      projectId: 'lori-christmas-2026',
+      storageBucket: 'lori-christmas-2026.firebasestorage.app',
+      messagingSenderId: '184081501664',
+      appId: '1:184081501664:web:7da42516d07502557a2f85',
+      measurementId: 'G-LP73DZQ9VC'
+    };
+    const configured = !Object.values(firebaseConfig).some(v => v.startsWith('REPLACE_WITH_'));
+    const db = configured ? getFirestore(initializeApp(firebaseConfig)) : null;
+    const resultRef = configured ? doc(db, 'christmasWheels', 'christmas2026') : null;
+    const GIFTS = [
+      { name: 'An Exotic Holiday', emoji: '🏝️', lines: ['EXOTIC', 'HOLIDAY'], weight: 1, image: 'https://images.unsplash.com/photo-1614505241498-80a3ec936595?auto=format&fit=crop&w=700&q=85' },
+      { name: 'Mugler Alien Perfume', emoji: '🧴', lines: ['MUGLER', 'ALIEN'], weight: 1, image: 'https://www.mugler.com/dw/image/v2/AANG_PRD/on/demandware.static/-/Sites-mugler-master-catalog/default/dwd782802c/images/pdp/M010401002/3439600056969_alien_90ml_refillable_main_v2.jpg?q=70&sfrm=png&sh=700&sm=cut&sw=700' },
+      { name: 'One Unforgettable Sex Night', emoji: '❤️', lines: ['SPECIAL', 'NIGHT'], weight: 1, image: 'https://cdn.yemek.com/uploads/2026/01/sevgiliye-romantik-yemek-masasi-shutter-2.jpg' },
+      { name: '6 Anca Massage Vouchers', emoji: '💆', lines: ['6 ANCA', 'MASSAGES'], weight: 1, image: 'https://images.squarespace-cdn.com/content/6170b69400455755db74a299/1772004856188-BA3ANESOOON55XUOKAHU/The%2BUltimate%2BGuide%2Bto%2BChoosing%2Bthe%2BBest%2BSpa%2Bfor%2BDeep%2BRelaxation%2Band%2BStress%2BRelief.png?content-type=image%2Fpng' },
+      { name: '£500', emoji: '💷', lines: ['£500'], weight: 1, image: 'https://commons.wikimedia.org/wiki/Special:FilePath/British%20Currency%20-%20United%20Kingdom%20Money%20-%20GBP%20Pounds.jpg?width=650' },
+      { name: 'Dior Petit CD Sunglasses', emoji: '🕶️', lines: ['DIOR', 'SUNGLASSES'], weight: 1, image: 'https://assets.christiandior.com/is/image/diorprod/PTCDS2IXR10A0_E03?$default_GHC$=&crop=150%2C823%2C1702%2C707&hei=700&scale=0.875&wid=700' },
+      { name: 'Christian Dior Bag', emoji: '👜', lines: ['DIOR', 'BAG'], weight: 1, image: 'https://diorama.dam-broadcast.com/cdn-cgi/image/width%3D700%2Cformat%3Dauto/pm_11872_867_867445-i38sn0qscr-whr.jpg' },
+      { name: 'Quit Playing Dota', emoji: '🎮', lines: ['QUIT', 'DOTA'], weight: 0, image: 'https://static.tildacdn.com/tild3939-3035-4531-a433-303135353963/__2023-06-15__165942.png' }
+    ];
+    const giftImages = GIFTS.map(gift => {
+      const img = new Image();
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => drawWheel();
+      img.onerror = () => drawWheel();
+      img.src = gift.image;
+      return img;
+    });
+
+    // This local flag only remembers whether this browser has seen the joke.
+    // The FINAL gift is held in Firestore and shared across every device.
+    const PRANK_KEY = 'christmas-wheel-2026-prank-v4';
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const testBtn = document.getElementById('testBtn');
+    const realBtn = document.getElementById('realBtn');
+    const message = document.getElementById('message');
+    const giftList = document.getElementById('giftList');
+    const colors = ['#bd3341','#175f4c','#cf9d48','#225c73','#bc3745','#196e56','#c88940','#585463'];
+    const step = Math.PI * 2 / GIFTS.length;
+    let currentRotation = 0;
+    let spinning = false;
+    let sharedResult = null;
+    let cloudReady = false;
+
+    const ELIGIBLE = [0,1,2,3,4,5,6];
+    function randomGiftIndex() {
+      const byte = new Uint8Array(1);
+      const limit = Math.floor(256 / ELIGIBLE.length) * ELIGIBLE.length;
+      do { crypto.getRandomValues(byte); } while (byte[0] >= limit);
+      return ELIGIBLE[byte[0] % ELIGIBLE.length];
+    }
+    function prankSeen() {
+      try { return localStorage.getItem(PRANK_KEY) === 'yes'; }
+      catch { return false; }
+    }
+    function savePrankSeen() {
+      try { localStorage.setItem(PRANK_KEY, 'yes'); return true; }
+      catch { return false; }
+    }
+    function showRetry() {
+      if (sharedResult) return setLocked(sharedResult);
+      message.innerHTML = '🎮 <strong>Quit Playing Dota!</strong> 😱<br>⚠️ An error occurred. Please respin!';
+      realBtn.textContent = '🎄 RESPIN (REAL)';
+      testBtn.disabled = !cloudReady;
+      realBtn.disabled = !cloudReady;
+    }
+    function showConnectionError() {
+      message.textContent = 'Unable to connect to the Christmas wheel. Check your connection and refresh.';
+      testBtn.disabled = true;
+      realBtn.disabled = true;
+    }
+    function drawWheel() {
+      const c = canvas.width / 2;
+      const radius = c - 9;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      GIFTS.forEach((gift, i) => {
+        // Segment 0 is centred beneath the top pointer before any rotation.
+        const start = -Math.PI / 2 - step / 2 + i * step;
+        const end = start + step;
+        ctx.beginPath();ctx.moveTo(c,c);ctx.arc(c,c,radius,start,end);ctx.closePath();
+        ctx.fillStyle = colors[i];ctx.fill();ctx.strokeStyle = '#fff0c8';ctx.lineWidth = 5;ctx.stroke();
+        ctx.save();ctx.translate(c,c);ctx.rotate(-Math.PI / 2 + i * step);
+        ctx.textAlign = 'center';ctx.textBaseline = 'middle';
+        const img = giftImages[i];
+        if (img.complete && img.naturalWidth) {
+          const x = radius * .69, y = -49, size = 112;
+          ctx.save();
+          ctx.beginPath();ctx.arc(x,y, size/2, 0, 2*Math.PI);ctx.clip();
+          const side = Math.min(img.naturalWidth, img.naturalHeight);
+          ctx.drawImage(img,(img.naturalWidth-side)/2,(img.naturalHeight-side)/2,side,side,x-size/2,y-size/2,size,size);
+          ctx.restore();
+          ctx.beginPath();ctx.arc(x,y,size/2,0,2*Math.PI);ctx.strokeStyle='#ffdf98';ctx.lineWidth=5;ctx.stroke();
+        } else {
+          ctx.font = '58px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+          ctx.fillText(gift.emoji, radius * .69, -37);
+        }
+        ctx.fillStyle = '#fffaf0';ctx.font = 'bold 23px system-ui,sans-serif';
+        ctx.shadowColor = '#0007';ctx.shadowBlur = 5;
+        gift.lines.forEach((line, row) => ctx.fillText(line, radius * .69, 37 + row * 28, radius * .52));
+        ctx.restore();
+      });
+    }
+    function renderGifts() {
+      giftList.replaceChildren();
+      GIFTS.forEach(gift => {
+        const item = document.createElement('div'); item.className = 'gift';
+        const img = document.createElement('img'); img.src = gift.image; img.alt = gift.name;
+        img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+        img.onerror = () => { img.replaceWith(document.createTextNode(gift.emoji)); };
+        item.append(img, document.createTextNode(gift.name));
+        giftList.append(item);
+      });
+    }
+    function setLocked(result) {
+      sharedResult = result;
+      realBtn.disabled = true;
+      realBtn.textContent = '✓ REAL SPIN USED';
+      testBtn.disabled = true;
+      if (Number.isInteger(result.index) && result.index >= 0 && result.index <= 6) {
+        message.innerHTML = '🎄 Your Christmas gift is <strong></strong>!';
+        message.querySelector('strong').textContent = GIFTS[result.index].emoji + ' ' + GIFTS[result.index].name;
+        if (!spinning) {
+          currentRotation = (360 - result.index * 45) % 360;
+          canvas.style.transition = 'none';
+          canvas.style.transform = `rotate(${currentRotation}deg)`;
+        }
+      } else {
+        message.textContent = 'The Christmas gift has already been claimed.';
+      }
+    }
+    async function reserveFinalResult(chosen) {
+      // Transaction: a single shared document is created exactly once.
+      // Simultaneous spins will all get the SAME stored winning gift.
+      return runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(resultRef);
+        if (snapshot.exists()) return snapshot.data();
+        const result = { index: chosen, savedAt: new Date().toISOString() };
+        transaction.set(resultRef, result);
+        return result;
+      });
+    }
+    async function spin(isReal) {
+      if (spinning || sharedResult || !cloudReady) return;
+      const prank = isReal && !prankSeen();
+      let chosen;
+      spinning = true;
+      testBtn.disabled = true;
+      realBtn.disabled = true;
+      if (prank) {
+        if (!savePrankSeen()) {
+          spinning = false;
+          message.textContent = 'Browser storage must be enabled to use the wheel.';
+          return;
+        }
+        chosen = 7;
+      } else if (isReal) {
+        message.textContent = 'Choosing your Christmas present…';
+        try {
+          const result = await reserveFinalResult(randomGiftIndex());
+          chosen = result.index;
+          sharedResult = result;
+        } catch (error) {
+          console.error('Saving the shared gift failed:', error);
+          spinning = false;
+          showConnectionError();
+          return;
+        }
+      } else {
+        chosen = randomGiftIndex();
+      }
+      message.textContent = prank ? 'The wheel has made its decision…' : isReal ? 'Your Christmas gift is being revealed…' : 'Practice spin…';
+      const normalized = ((currentRotation % 360) + 360) % 360;
+      const target = (360 - chosen * 45) % 360;
+      const delta = ((target - normalized) + 360) % 360;
+      currentRotation += 360 * 6 + delta;
+      canvas.style.transition = 'transform 5.5s cubic-bezier(.12,.74,.13,1)';
+      requestAnimationFrame(() => { canvas.style.transform = `rotate(${currentRotation}deg)`; });
+      const complete = () => {
+        spinning = false;
+        if (prank) showRetry();
+        else if (isReal) setLocked({ index: chosen });
+        else if (sharedResult) setLocked(sharedResult);
+        else {
+          message.innerHTML = 'Test result: <strong></strong>';
+          message.querySelector('strong').textContent = GIFTS[chosen].emoji + ' ' + GIFTS[chosen].name;
+          testBtn.disabled = false;
+          realBtn.disabled = false;
+        }
+      };
+      canvas.addEventListener('transitionend', complete, { once: true });
+    }
+
+    drawWheel();
+    renderGifts();
+    testBtn.disabled = true;
+    realBtn.disabled = true;
+    message.textContent = 'Connecting to the Christmas wheel…';
+
+    if (!configured) {
+      message.textContent = 'Website setup is incomplete. Add your Firebase configuration to index.html.';
+    } else {
+      try {
+        const initial = await getDoc(resultRef);
+        cloudReady = true;
+        if (initial.exists()) setLocked(initial.data());
+        else if (prankSeen()) showRetry();
+        else {
+          message.textContent = 'Your Christmas surprise is waiting!';
+          testBtn.disabled = false;
+          realBtn.disabled = false;
+        }
+        onSnapshot(resultRef, snapshot => {
+          if (snapshot.exists()) {
+            sharedResult = snapshot.data();
+            if (!spinning) setLocked(sharedResult);
+            else { testBtn.disabled = true; realBtn.disabled = true; }
+          }
+        }, error => {
+          console.error('Live updates failed:', error);
+          if (!sharedResult) showConnectionError();
+        });
+      } catch (error) {
+        console.error('Firebase connection failed:', error);
+        showConnectionError();
+      }
+    }
+    testBtn.addEventListener('click', () => spin(false));
+    realBtn.addEventListener('click', () => spin(true));
+  </script>
+</body>
+</html>
